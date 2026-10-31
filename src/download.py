@@ -2,6 +2,7 @@ import numpy as np
 import pystac_client
 import planetary_computer as pc
 from odc.stac import load
+import rasterio
 
 CATALOG_URL = "https://planetarycomputer.microsoft.com/api/stac/v1"
 BANDS = ["B02", "B03", "B04", "B08", "B11"]   # blue, green, red, NIR, SWIR
@@ -50,3 +51,18 @@ def true_color(ds, low=2, high=98):
     rgb = np.dstack([ds["B04"].values, ds["B03"].values, ds["B02"].values])
     lo, hi = np.nanpercentile(rgb, [low, high])
     return np.clip((rgb - lo) / (hi - lo), 0, 1)
+
+
+def save_composite(ds, path):
+    """Write a composite (from get_composite) as a georeferenced multi-band GeoTIFF."""
+    arr = np.stack([ds[b].values for b in BANDS]).astype("float32")
+    gb = ds.odc.geobox
+    with rasterio.open(
+        path, "w", driver="GTiff",
+        height=arr.shape[1], width=arr.shape[2], count=arr.shape[0],
+        dtype="float32", crs=gb.crs.to_wkt(), transform=gb.transform,
+        nodata=np.nan, compress="deflate",
+    ) as dst:
+        dst.write(arr)
+        for i, b in enumerate(BANDS, start=1):
+            dst.set_band_description(i, b)
