@@ -42,7 +42,7 @@ def to_geodataframe(lab_kept, stats, ref_path, period):
     with rasterio.open(ref_path) as src:
         transform, crs = src.transform, src.crs
     rows = []
-    for geom, val in shapes(lab_kept, mask=lab_kept > 0, transform=transform):
+    for geom, val in shapes(lab_kept, mask=lab_kept > 0, transform=transform, connectivity=8):
         s = stats[int(val)]
         rows.append({"geometry": shape(geom), "id": int(val), "period": period, **s})
     gdf = gpd.GeoDataFrame(rows, geometry="geometry", crs=crs)
